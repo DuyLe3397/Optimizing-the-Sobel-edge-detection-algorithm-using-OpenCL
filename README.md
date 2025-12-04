@@ -1,0 +1,2 @@
+ code đã chạy được với makefile nhưng chỉ đang ở mức chạy thuật toán, dùng thư viện và tính toán tốt
+ nhưng chưa thể hiển thị được ảnh và mở được camera, đã tính toán được bằng CPU và GPU để phát hiện cạnh, dùng được cả opencl và opencv
