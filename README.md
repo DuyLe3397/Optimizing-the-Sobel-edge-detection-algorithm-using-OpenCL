@@ -1,4 +1,4 @@
-# 🚀 Tối ưu thuật toán Sobel bằng OpenCL trên GPU
+# 🚀 Tối ưu thuật toán Sobel bằng OpenCL
 
 Dự án này mở rộng thuật toán Sobel theo **3 hướng xử lý**:
 
