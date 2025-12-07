@@ -272,63 +272,101 @@ int main()
                           std::vector<std::vector<double>> &data,
                           std::string title)
     {
-        int width = 1400, height = 700;
+        int width = 1600, height = 800;
         cv::Mat chart(height, width, CV_8UC3, cv::Scalar(255, 255, 255));
 
-        int margin = 100;
-        int base_y = height - margin;
+        int margin_left = 150;
+        int margin_bottom = 120;
+        int margin_top = 80;
+        int margin_right = 80;
 
-        // Find max
+        int base_y = height - margin_bottom;
+
+        // ============================
+        //     Find max value
+        // ============================
         double maxv = 0;
         for (auto &run : data)
             for (double v : run)
-                if (v > maxv)
-                    maxv = v;
+                maxv = std::max(maxv, v);
 
-        double scale = (height - 2 * margin) / maxv;
+        double y_scale = (height - margin_top - margin_bottom) / maxv;
 
-        // Draw axes
-        cv::line(chart, {margin, base_y}, {width - margin, base_y}, {0, 0, 0}, 2);
-        cv::line(chart, {margin, base_y}, {margin, margin}, {0, 0, 0}, 2);
+        // ============================
+        // Draw Y axis + ticks
+        // ============================
+        cv::line(chart,
+                 {margin_left, margin_top},
+                 {margin_left, base_y},
+                 {0, 0, 0}, 2);
 
-        // ---- Draw Y ticks every 50ms ----
         int step_ms = 50;
-        for (int t = 0; t <= (int)maxv + 50; t += step_ms)
+        for (int t = 0; t <= (int)maxv + step_ms; t += step_ms)
         {
-            int y = base_y - t * scale;
-            cv::line(chart, {margin - 5, y}, {margin + 5, y}, {0, 0, 0}, 2);
+            int y = base_y - t * y_scale;
+            cv::line(chart, {margin_left - 5, y}, {margin_left + 5, y}, {0, 0, 0}, 2);
 
-            cv::putText(chart, std::to_string(t),
-                        {margin - 60, y + 5},
-                        cv::FONT_HERSHEY_SIMPLEX, 0.5,
-                        {0, 0, 0}, 1);
+            cv::putText(chart, std::to_string(t) + " ms",
+                        {margin_left - 120, y + 5},
+                        cv::FONT_HERSHEY_SIMPLEX, 0.6,
+                        {0, 0, 0}, 2);
         }
 
-        // Draw title
-        cv::putText(chart, title, {width / 2 - 150, 50},
-                    cv::FONT_HERSHEY_SIMPLEX, 1.2, {0, 0, 0}, 3);
-
+        // ============================
+        // Draw X axis + ticks
+        // ============================
         int n = labels.size();
-        int step_x = (width - 2 * margin) / (n + 1);
+        int step_x = (width - margin_left - margin_right) / (n + 1);
 
+        cv::line(chart,
+                 {margin_left, base_y},
+                 {width - margin_right, base_y},
+                 {0, 0, 0}, 2);
+
+        for (int i = 0; i < n; i++)
+        {
+            int x = margin_left + (i + 1) * step_x;
+
+            cv::line(chart, {x, base_y - 5}, {x, base_y + 5}, {0, 0, 0}, 2);
+
+            cv::putText(chart, labels[i],
+                        {x - 80, base_y + 30},
+                        cv::FONT_HERSHEY_SIMPLEX, 0.55,
+                        {0, 0, 0}, 2);
+        }
+
+        // ============================
+        // Draw title
+        // ============================
+        cv::putText(chart, title,
+                    {width / 2 - 250, margin_top - 20},
+                    cv::FONT_HERSHEY_SIMPLEX, 1.5,
+                    {0, 0, 0}, 3);
+
+        // ============================
+        // Draw curves
+        // ============================
         cv::Scalar colors[5] = {
-            {0, 0, 255}, {0, 128, 255}, {0, 200, 0}, {255, 128, 0}, {128, 0, 255}};
+            {0, 0, 255},
+            {0, 128, 255},
+            {0, 200, 0},
+            {255, 128, 0},
+            {128, 0, 255}};
 
         for (int run = 0; run < 5; run++)
         {
             for (int i = 0; i < n; i++)
             {
-                int x = margin + (i + 1) * step_x;
-                int y = base_y - data[run][i] * scale;
+                int x = margin_left + (i + 1) * step_x;
+                int y = base_y - data[run][i] * y_scale;
 
                 cv::circle(chart, {x, y}, 5, colors[run], -1);
 
                 if (i > 0)
                 {
-                    int x_prev = margin + (i)*step_x;
-                    int y_prev = base_y - data[run][i - 1] * scale;
-
-                    cv::line(chart, {x_prev, y_prev}, {x, y}, colors[run], 2);
+                    int px = margin_left + i * step_x;
+                    int py = base_y - data[run][i - 1] * y_scale;
+                    cv::line(chart, {px, py}, {x, y}, colors[run], 2);
                 }
             }
         }
