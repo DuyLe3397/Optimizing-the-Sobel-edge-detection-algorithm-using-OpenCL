@@ -9,7 +9,7 @@ Dự án này mở rộng thuật toán Sobel theo **3 hướng xử lý**:
 Dự án cũng:
 - Chạy mỗi phương pháp **5 lần**, trên **nhiều độ phân giải ảnh**
 - Xuất file **results.csv**
-- Tạo **3 biểu đồ** tương ứng cho GPU / CPU tuần tự / CPU song song (OpenMP)
+- Tạo **3 biểu đồ** tương ứng cho GPU / CPU tuần tự / CPU song song
 - Xuất ảnh đã xử lý để so sánh trực quan
 
 ---
