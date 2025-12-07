@@ -29,8 +29,6 @@ cv::addWeighted(...);
 
 Đây là phiên bản tối ưu của OpenCV, đã vectorized (SSE/AVX) rất mạnh.
 
----
-
 ## 2️⃣ CPU song song (OpenMP)
 
 Đã tự implement Sobel:
