@@ -126,9 +126,12 @@ long long sobelOMP(const cv::Mat &input, cv::Mat &output)
 
     auto t1 = std::chrono::high_resolution_clock::now();
 
-#pragma omp parallel for collapse(2)
+    // Parallel theo trục Y
+#pragma omp parallel for
     for (int y = 1; y < height - 1; y++)
     {
+        // Vector hóa theo trục X
+#pragma omp simd
         for (int x = 1; x < width - 1; x++)
         {
             int gx =
@@ -141,6 +144,7 @@ long long sobelOMP(const cv::Mat &input, cv::Mat &output)
                 -input.at<uchar>(y + 1, x - 1) - 2 * input.at<uchar>(y + 1, x) - input.at<uchar>(y + 1, x + 1);
 
             int mag = std::min(255, (abs(gx) + abs(gy)) / 2);
+
             output.at<uchar>(y, x) = mag;
         }
     }
