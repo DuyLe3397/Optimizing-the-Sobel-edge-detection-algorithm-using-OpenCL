@@ -77,11 +77,11 @@ Mỗi biểu đồ gồm **5 đường** tương ứng 5 lần chạy.
 ![Image1_GPU_OpenCL](output/GPU_1_1280x720.jpg)
 ![Image2_GPU_OpenCL](output/GPU_8_15360x8640.jpg)
 
-- Kết quả ảnh với độ phân giải nhỏ nhất và lớn nhất khi đi qua CPU
+- Kết quả ảnh với độ phân giải nhỏ nhất và lớn nhất khi đi qua CPU_OpenCV (tuần tự)
 ![Image1_CPU](output/CPU_1_1280x720.jpg)
 ![Image2_CPU](output/CPU_8_15360x8640.jpg)
 
-- Kết quả ảnh với độ phân giải nhỏ nhất và lớn nhất khi đi qua GPU_OpenCL
+- Kết quả ảnh với độ phân giải nhỏ nhất và lớn nhất khi đi qua CPU_OpenMP
 ![Image1_CPU_OpenMP](output/OMP_1_1280x720.jpg)
 ![Image2_CPU_OpenMP](output/OMP_8_15360x8640.jpg)
 
