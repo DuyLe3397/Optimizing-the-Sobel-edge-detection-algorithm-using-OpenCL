@@ -342,7 +342,7 @@ int main()
     // ======================================================
     draw_chart("chart_gpu.png", gpu, "GPU (OpenCL) - 5 Runs");
     draw_chart("chart_cpu.png", cpu, "CPU (OpenCV) - 5 Runs");
-    draw_chart("chart_omp.png", omp, "CPU OpenMP - 5 Runs");
+    draw_chart("chart_omp.png", omp, "CPU (OpenMP) - 5 Runs");
 
     return 0;
 }
