@@ -65,13 +65,25 @@ File **results.csv** chứa:
 RESOLUTION, GPU_1..GPU_5, CPU_1..CPU_5, OMP_1..OMP_5
 ```
 
-Dự án đã vẽ 3 biểu đồ:
+- Dự án đã vẽ 3 biểu đồ:
 
 ![GPU_OpenCL](output/chart_gpu.png)
 ![CPU](output/chart_cpu.png)
 ![CPU_OpenMP](output/chart_omp.png)
 
 Mỗi biểu đồ gồm **5 đường** tương ứng 5 lần chạy.
+
+- Kết quả ảnh với độ phân giải nhỏ nhất và lớn nhất khi đi qua GPU_OpenCL
+![Image1_GPU_OpenCL](output/GPU_1_1280x720.jpg)
+![Image2_GPU_OpenCL](output/GPU_8_15360x8640.jpg)
+
+- Kết quả ảnh với độ phân giải nhỏ nhất và lớn nhất khi đi qua CPU
+![Image1_CPU](output/CPU_1_1280x720.jpg)
+![Image2_CPU](output/CPU_8_15360x8640.jpg)
+
+- Kết quả ảnh với độ phân giải nhỏ nhất và lớn nhất khi đi qua GPU_OpenCL
+![Image1_CPU_OpenMP](output/OMP_1_1280x720.jpg)
+![Image2_CPU_OpenMP](output/OMP_8_15360x8640.jpg)
 
 ---
 
