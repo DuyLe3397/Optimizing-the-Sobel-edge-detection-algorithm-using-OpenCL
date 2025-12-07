@@ -1,6 +1,6 @@
 # Compiler and Flags
 CXX = g++
-CXXFLAGS = -std=c++17 -O2 -Wall -Wextra
+CXXFLAGS = -std=c++17 -O2 -Wall -Wextra -fopenmp   # <-- Bật OpenMP
 
 # Directories
 SRC_DIR = src
@@ -9,11 +9,15 @@ BUILD_DIR = build
 # OpenCL and OpenCV Paths
 OPENCL_INC = /c/OpenCL-SDK/include
 OPENCL_LIB = /c/OpenCL-SDK/lib
+
 OPENCV_INC = /ucrt64/include/opencv4
 OPENCV_LIB = /ucrt64/lib
 
 # Linker Flags
-LDFLAGS = -L$(OPENCL_LIB) -lOpenCL -L$(OPENCV_LIB) -lopencv_core -lopencv_imgcodecs -lopencv_highgui -lopencv_imgproc
+LDFLAGS = -L$(OPENCL_LIB) -lOpenCL \
+          -L$(OPENCV_LIB) \
+          -lopencv_core -lopencv_imgcodecs -lopencv_highgui -lopencv_imgproc \
+          -fopenmp                    # <-- Link OpenMP
 
 # Files
 SRC = $(SRC_DIR)/edge_detect.cpp
