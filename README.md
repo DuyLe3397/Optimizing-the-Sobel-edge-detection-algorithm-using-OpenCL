@@ -59,17 +59,22 @@ magnitude = sqrt(sumX*sumX + sumY*sumY);
 
 # 📊 Kết quả
 
-File **results.csv** chứa:
+- File **results.csv** chứa:
 
-```
+```bash
 RESOLUTION, GPU_1..GPU_5, CPU_1..CPU_5, OMP_1..OMP_5
+```
+- File **summary.csv** chứa:
+
+```bash
+RESOLUTION, CPU_mean_ms, GPU_mean_ms, OMP_1_mean_ms ... OMP_8_mean_ms, Speedup_GPU, Speedup_OMP_1 ... Speedup_OMP_8
 ```
 
 - Dự án đã vẽ 3 biểu đồ:
 
 ![GPU_OpenCL](output/chart_gpu.png)
 ![CPU](output/chart_cpu.png)
-![CPU_OpenMP](output/chart_omp.png)
+![CPU_OpenMP](output/chart_omp4.png)
 
 Mỗi biểu đồ gồm **5 đường** tương ứng 5 lần chạy.
 
@@ -82,8 +87,8 @@ Mỗi biểu đồ gồm **5 đường** tương ứng 5 lần chạy.
 ![Image2_CPU](output/CPU_8_15360x8640.jpg)
 
 - Kết quả ảnh với độ phân giải nhỏ nhất và lớn nhất khi đi qua CPU_OpenMP
-![Image1_CPU_OpenMP](output/OMP_1_1280x720.jpg)
-![Image2_CPU_OpenMP](output/OMP_8_15360x8640.jpg)
+![Image1_CPU_OpenMP](output/OMP4_1_1280x720.jpg)
+![Image2_CPU_OpenMP](output/OMP4_8_15360x8640.jpg)
 
 ---
 
@@ -93,6 +98,7 @@ Mỗi biểu đồ gồm **5 đường** tương ứng 5 lần chạy.
 input/         ← chứa ảnh .jpg
 output/
     results.csv
+    summary.csv
     GPU_xxx.jpg
     CPU_xxx.jpg
     OMP_xxx.jpg
