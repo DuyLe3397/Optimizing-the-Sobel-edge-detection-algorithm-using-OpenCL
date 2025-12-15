@@ -74,7 +74,7 @@ RESOLUTION, CPU_mean_ms, GPU_mean_ms, OMP_1_mean_ms ... OMP_8_mean_ms, Speedup_G
 
 ![GPU_OpenCL](output/chart_gpu.png)
 ![CPU](output/chart_cpu.png)
-![CPU_OpenMP](output/chart_omp4.png)
+![CPU_OpenMP](output/chart_omp8.png)
 
 Mỗi biểu đồ gồm **5 đường** tương ứng 5 lần chạy.
 
@@ -87,8 +87,8 @@ Mỗi biểu đồ gồm **5 đường** tương ứng 5 lần chạy.
 ![Image2_CPU](output/CPU_8_15360x8640.jpg)
 
 - Kết quả ảnh với độ phân giải nhỏ nhất và lớn nhất khi đi qua CPU_OpenMP
-![Image1_CPU_OpenMP](output/OMP4_1_1280x720.jpg)
-![Image2_CPU_OpenMP](output/OMP4_8_15360x8640.jpg)
+![Image1_CPU_OpenMP](output/OMP8_1_1280x720.jpg)
+![Image2_CPU_OpenMP](output/OMP8_8_15360x8640.jpg)
 
 ---
 
@@ -133,26 +133,7 @@ CXXFLAGS = -std=c++17 -O2 -Wall -Wextra -fopenmp
 - Nhanh hơn OpenMP gấp 15 lần
 - Khi ảnh lớn (8K–16K) tăng tốc còn mạnh hơn
 
-### 🥈 2. CPU tuần tự (OpenCV filter2D)
-- Tối ưu hóa cực tốt với SIMD
-- Dù chỉ 1 core nhưng vượt xa OpenMP nhiều core
+### 🥈 2. CPU OpenMP song song 
 
-### 🥉 3. CPU OpenMP tự code – chậm nhất
+### 🥉 3. CPU tuần tự (OpenCV filter2D)
 
-## ❗ **OpenMP lại chậm hơn CPU tuần tự?**
-
-Đây là **hiện tượng bình thường**, nguyên nhân gồm:
-
-### ⚠ 1. `input.at<uchar>(...)` cực kỳ chậm trong vòng lặp song song  
-- Khi dùng trong vòng lặp lớn, chi phí này cộng dồn khiến tốc độ bị giảm, làm mất lợi ích của đa luồng.  
-➡ **không phù hợp cho OpenMP**
-
-### ⚠ 2. Tiêu tốn tài nguyên để tạo thread
-- Mỗi lần OpenMP tạo nhiều luồng (threads), CPU phải tốn thời gian thiết lập và đồng bộ. Đối với tác vụ Sobel vốn rất nhẹ, thời gian tạo thread có khi còn lâu hơn thời gian xử lý thật sự.
-
-### ⚠ 3. CPU tuần tự dùng OpenCV đã tối ưu bằng AVX/SIMD còn CPU dùng OpenMP thì không
-- Hàm Sobel của OpenCV dùng tối ưu cấp thấp (SIMD SSE/AVX), tối ưu cache, tối ưu nhánh.
-➡ 1 core OpenCV có thể nhanh hơn cả **4–8 core** code tự viết.
-
-### ⚠ 4. SIMD và không SIMD (SIMD là 1 cơ chế cho phép 1 lệnh có tác động trên nhiều dữ liệu)
-- CPU OpenMP chỉ song song hóa đa luồng, không tự vector hóa tốt. Không có SIMD thì mỗi luồng sẽ xử lý ít dữ liệu hơn, nên tốc độ không vượt qua được CPU tuần tự đã có SIMD của OpenCV.
