@@ -172,11 +172,12 @@ long long sobelGPU(const cv::Mat &input, cv::Mat &output, OpenCLSobelContext &ct
 }
 
 // =============================================
-// CPU Sequential (OpenCV filter2D)
+// CPU Sequential (OpenCV filter2D) – 1 luồng
 // =============================================
 long long sobelCPU(const cv::Mat &input, cv::Mat &output)
 {
-    cv::setNumThreads(1); // tránh OpenCV tự đa luồng
+    // Bắt OpenCV chỉ dùng 1 luồng → đúng 1 nhân
+    cv::setNumThreads(1);
 
     cv::Mat kernelX = (cv::Mat_<char>(3, 3)
                            << -1,
@@ -204,10 +205,11 @@ long long sobelCPU(const cv::Mat &input, cv::Mat &output)
 }
 
 // =============================================
-// CPU Parallel OpenMP – có tham số num_threads
+// CPU Parallel OpenMP – dùng OpenCV + OpenMP
 // =============================================
 long long sobelOMP(const cv::Mat &input, cv::Mat &output, int num_threads)
 {
+    // Tắt đa luồng nội bộ của OpenCV: để OpenMP kiểm soát hoàn toàn
     cv::setNumThreads(1);
 
     int width = input.cols;
@@ -216,28 +218,57 @@ long long sobelOMP(const cv::Mat &input, cv::Mat &output, int num_threads)
     if (output.empty() || output.rows != height || output.cols != width)
         output.create(height, width, CV_8UC1);
 
+    // Kernel Sobel giống CPU tuần tự
+    cv::Mat kernelX = (cv::Mat_<char>(3, 3)
+                           << -1,
+                       0, 1,
+                       -2, 0, 2,
+                       -1, 0, 1);
+    cv::Mat kernelY = (cv::Mat_<char>(3, 3)
+                           << 1,
+                       2, 1,
+                       0, 0, 0,
+                       -1, -2, -1);
+
     omp_set_num_threads(num_threads);
 
     auto t1 = std::chrono::high_resolution_clock::now();
 
-#pragma omp parallel for
-    for (int y = 1; y < height - 1; y++)
+#pragma omp parallel
     {
-#pragma omp simd
-        for (int x = 1; x < width - 1; x++)
+        int tid = omp_get_thread_num();
+        int nth = omp_get_num_threads();
+
+        int rows_per_thread = height / nth;
+        int y_start = tid * rows_per_thread;
+        int y_end = (tid == nth - 1) ? height : (y_start + rows_per_thread);
+
+        // Để convolution 3x3 đúng, mỗi dải cần "mượn" thêm 1 hàng trên và 1 hàng dưới
+        int y0 = std::max(0, y_start - 1);
+        int y1 = std::min(height, y_end + 1);
+        int local_rows = y1 - y0;
+
+        cv::Mat input_roi = input.rowRange(y0, y1);
+        cv::Mat gx_roi, gy_roi, ax_roi, ay_roi, out_roi;
+
+        cv::filter2D(input_roi, gx_roi, CV_16S, kernelX);
+        cv::filter2D(input_roi, gy_roi, CV_16S, kernelY);
+        cv::convertScaleAbs(gx_roi, ax_roi);
+        cv::convertScaleAbs(gy_roi, ay_roi);
+        cv::addWeighted(ax_roi, 0.5, ay_roi, 0.5, 0, out_roi);
+
+        // Copy phần "core" (bỏ biên mượn) về output chính
+        int copy_y_start_in_roi = (y_start == 0) ? 0 : 1;
+        int copy_y_end_in_roi = local_rows - ((y_end == height) ? 0 : 1);
+
+        int dst_y_start = y_start;
+        int dst_y_end = y_end;
+
+        if (copy_y_end_in_roi > copy_y_start_in_roi)
         {
-            int gx =
-                -input.at<uchar>(y - 1, x - 1) + input.at<uchar>(y - 1, x + 1) +
-                -2 * input.at<uchar>(y, x - 1) + 2 * input.at<uchar>(y, x + 1) +
-                -input.at<uchar>(y + 1, x - 1) + input.at<uchar>(y + 1, x + 1);
-
-            int gy =
-                input.at<uchar>(y - 1, x - 1) + 2 * input.at<uchar>(y - 1, x) + input.at<uchar>(y - 1, x + 1) +
-                -input.at<uchar>(y + 1, x - 1) - 2 * input.at<uchar>(y + 1, x) - input.at<uchar>(y + 1, x + 1);
-
-            int mag = std::min(255, (abs(gx) + abs(gy)) / 2);
-
-            output.at<uchar>(y, x) = static_cast<uchar>(mag);
+            cv::Mat src_core = out_roi.rowRange(copy_y_start_in_roi, copy_y_end_in_roi);
+            cv::Mat dst_core = output.rowRange(dst_y_start, dst_y_end);
+            src_core.copyTo(dst_core);
         }
     }
 
@@ -252,20 +283,20 @@ int main(int argc, char **argv)
 {
     fs::create_directories("output");
 
-    // CSV chi tiết
+    // CSV chi tiết: GPU / CPU tuần tự / OMP 8 threads
     std::ofstream csv("output/results.csv");
     csv << "RESOLUTION,"
         << "GPU_1,GPU_2,GPU_3,GPU_4,GPU_5,"
         << "CPU_1,CPU_2,CPU_3,CPU_4,CPU_5,"
-        << "OMP4_1,OMP4_2,OMP4_3,OMP4_4,OMP4_5\n";
+        << "OMP8_1,OMP8_2,OMP8_3,OMP8_4,OMP8_5\n";
 
     // CSV tổng hợp (mean + speedup + scaling)
     std::ofstream csv_summary("output/summary.csv");
     csv_summary << "RESOLUTION,"
                 << "CPU_mean_ms,GPU_mean_ms,"
-                << "OMP_1_mean_ms,OMP_2_mean_ms,OMP_4_mean_ms,OMP_8_mean_ms,"
+                << "OMP_2_mean_ms,OMP_3_mean_ms,OMP_4_mean_ms,OMP_5_mean_ms,OMP_6_mean_ms,OMP_8_mean_ms,"
                 << "Speedup_GPU,"
-                << "Speedup_OMP_1,Speedup_OMP_2,Speedup_OMP_4,Speedup_OMP_8\n";
+                << "Speedup_OMP_2,Speedup_OMP_3,Speedup_OMP_4,Speedup_OMP_5,Speedup_OMP_6,Speedup_OMP_8\n";
 
     // Duyệt toàn bộ ảnh trong thư mục input/
     for (auto &file : fs::directory_iterator("input"))
@@ -294,19 +325,20 @@ int main(int argc, char **argv)
         // === Init OpenCL cho độ phân giải này ===
         OpenCLSobelContext gpu_ctx = initSobelGPU(w, h);
 
-        long long GPU[5], CPU[5], OMP4[5];
+        long long GPU[5], CPU[5], OMP8[5];
 
+        // 5 lần đo GPU / CPU tuần tự / OMP 8 threads cho bảng chi tiết
         for (int i = 0; i < 5; i++)
         {
             GPU[i] = sobelGPU(input, gpu_out, gpu_ctx);
-            CPU[i] = sobelCPU(input, cpu_out);
-            OMP4[i] = sobelOMP(input, omp_out, 4); // cố định 4 luồng cho bảng chi tiết
+            CPU[i] = sobelCPU(input, cpu_out);     // CPU tuần tự 1 luồng
+            OMP8[i] = sobelOMP(input, omp_out, 8); // CPU song song 8 threads
         }
 
-        // Lưu ảnh kết quả (GPU / CPU / OMP 4 threads)
+        // Lưu ảnh kết quả (GPU / CPU / OMP 8 threads)
         cv::imwrite("output/GPU_" + filename, gpu_out);
         cv::imwrite("output/CPU_" + filename, cpu_out);
-        cv::imwrite("output/OMP4_" + filename, omp_out);
+        cv::imwrite("output/OMP8_" + filename, omp_out);
 
         // Ghi CSV chi tiết
         csv << res << ",";
@@ -315,9 +347,9 @@ int main(int argc, char **argv)
         for (int i = 0; i < 5; i++)
             csv << CPU[i] << ",";
         for (int i = 0; i < 5; i++)
-            csv << OMP4[i] << (i == 4 ? "\n" : ",");
+            csv << OMP8[i] << (i == 4 ? "\n" : ",");
 
-        // ======= Tính trung bình cho CPU & GPU =======
+        // ======= Tính trung bình cho CPU & GPU (5 lần) =======
         auto avg5 = [](long long a[5])
         {
             long long s = 0;
@@ -329,11 +361,11 @@ int main(int argc, char **argv)
         double cpu_mean_us = avg5(CPU);
         double gpu_mean_us = avg5(GPU);
 
-        // ======= Đo OMP với 1,2,4,8 threads (3 lần mỗi cấu hình) =======
-        int omp_threads[4] = {1, 2, 4, 8};
-        double omp_mean_us[4];
+        // ======= Đo OMP với 2,3,4,5,6,8 threads (3 lần mỗi cấu hình) =======
+        int omp_threads[6] = {2, 3, 4, 5, 6, 8};
+        double omp_mean_us[6];
 
-        for (int k = 0; k < 4; ++k)
+        for (int k = 0; k < 6; ++k)
         {
             long long tmp[3];
             for (int i = 0; i < 3; ++i)
@@ -344,23 +376,26 @@ int main(int argc, char **argv)
 
         // ======= Speedup =======
         double speedup_gpu = cpu_mean_us / gpu_mean_us;
-        double speedup_omp[4];
-        for (int k = 0; k < 4; ++k)
+        double speedup_omp[6];
+        for (int k = 0; k < 6; ++k)
             speedup_omp[k] = cpu_mean_us / omp_mean_us[k];
 
         // Ghi CSV summary (đổi ra ms)
         csv_summary << res << ","
                     << cpu_mean_us / 1000.0 << "," << gpu_mean_us / 1000.0 << ","
-                    << omp_mean_us[0] / 1000.0 << "," // 1 thread
-                    << omp_mean_us[1] / 1000.
-                    << ","                            // 2 threads
+                    << omp_mean_us[0] / 1000.0 << "," // 2 threads
+                    << omp_mean_us[1] / 1000.0 << "," // 3 threads
                     << omp_mean_us[2] / 1000.0 << "," // 4 threads
-                    << omp_mean_us[3] / 1000.0 << "," // 8 threads
+                    << omp_mean_us[3] / 1000.0 << "," // 5 threads
+                    << omp_mean_us[4] / 1000.0 << "," // 6 threads
+                    << omp_mean_us[5] / 1000.0 << "," // 8 threads
                     << speedup_gpu << ","
                     << speedup_omp[0] << ","
                     << speedup_omp[1] << ","
                     << speedup_omp[2] << ","
-                    << speedup_omp[3] << "\n";
+                    << speedup_omp[3] << ","
+                    << speedup_omp[4] << ","
+                    << speedup_omp[5] << "\n";
 
         // Giải phóng OpenCL resource cho ảnh này
         releaseSobelGPU(gpu_ctx);
@@ -384,7 +419,7 @@ int main(int argc, char **argv)
     getline(fin, line); // skip header
 
     std::vector<std::string> labels;
-    std::vector<std::vector<double>> gpu(5), cpu(5), omp4(5);
+    std::vector<std::vector<double>> gpu(5), cpu(5), omp8(5);
 
     while (getline(fin, line))
     {
@@ -409,7 +444,7 @@ int main(int argc, char **argv)
         {
             std::string v;
             getline(ss, v, ',');
-            omp4[i].push_back(std::stod(v) / 1000.0);
+            omp8[i].push_back(std::stod(v) / 1000.0);
         }
     }
     fin.close();
@@ -546,10 +581,10 @@ int main(int argc, char **argv)
         std::cout << "📊 Saved chart: output/" << filename << "\n";
     };
 
-    // Generate 3 charts: GPU / CPU / OMP4
+    // Generate 3 charts: GPU / CPU / OMP8
     draw_chart("chart_gpu.png", gpu, "GPU (OpenCL) - 5 Runs");
-    draw_chart("chart_cpu.png", cpu, "CPU (OpenCV) - 5 Runs");
-    draw_chart("chart_omp4.png", omp4, "CPU (OpenMP, 4 threads) - 5 Runs");
+    draw_chart("chart_cpu.png", cpu, "CPU (OpenCV, 1 thread) - 5 Runs");
+    draw_chart("chart_omp8.png", omp8, "CPU (OpenCV + OpenMP, 8 threads) - 5 Runs");
 
     return 0;
 }
